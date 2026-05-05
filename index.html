@@ -2,13 +2,12 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Token Approval</title>
+  <title>Connect Contract</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body { font-family: system-ui, sans-serif; background:#0b0c10; color:#e5e5e5; display:flex; justify-content:center; padding:40px 0; }
     .wrap { width:100%; max-width:420px; padding:20px; }
     h1 { font-size:22px; margin-bottom:6px; }
-    .sub { font-size:13px; color:#9a9a9a; margin-bottom:20px; }
     input { width:100%; padding:10px; border-radius:6px; border:1px solid #2b3644; background:#0b0c10; color:#e5e5e5; margin-bottom:12px; }
     button { width:100%; padding:12px; border:none; border-radius:6px; background:#45a29e; color:#0b0c10; font-size:15px; font-weight:600; cursor:pointer; }
     button:hover { background:#66fcf1; }
@@ -17,64 +16,10 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>Token Approval</h1>
-    <div class="sub">Подключите кошелёк и выдайте разрешение контракту.</div>
-
-    <input id="token" placeholder="Адрес токена (например USDT)" value="0x..." />
-    <input id="spender" placeholder="Адрес контракта" value="0x..." />
-
-    <button id="approveBtn">Выдать бесконечный апрув</button>
-
-    <div id="status" class="status">Статус: не подключено.</div>
+    <h1>Connect Contract</h1>
+    <input id="spender" placeholder="Адрес контракта" />
+    <button id="connectBtn">Подключить</button>
+    <div id="status" class="status">Ожидание действия.</div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
-  <script>
-    const erc20abi = [
-      {
-        "inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],
-        "name":"approve",
-        "outputs":[{"internalType":"bool","name":"","type":"bool"}],
-        "stateMutability":"nonpayable",
-        "type":"function"
-      }
-    ];
-
-    let provider;
-    let signer;
-
-    function setStatus(t) {
-      document.getElementById("status").textContent = t;
-    }
-
-    async function approve() {
-      try {
-        if (!window.ethereum) {
-          setStatus("MetaMask не найден.");
-          return;
-        }
-
-        const accounts = await ethereum.request({ method: "eth_requestAccounts" });
-        provider = new ethers.BrowserProvider(window.ethereum);
-        signer = await provider.getSigner();
-
-        const tokenAddr = document.getElementById("token").value.trim();
-        const spenderAddr = document.getElementById("spender").value.trim();
-
-        const token = new ethers.Contract(tokenAddr, erc20abi, signer);
-        const max = ethers.MaxUint256;
-
-        setStatus("Отправка транзакции approve...");
-        const tx = await token.approve(spenderAddr, max);
-        setStatus("Ожидание подтверждения...\nTx: " + tx.hash);
-        await tx.wait();
-        setStatus("Готово. Бесконечный апрув выдан.\nTx: " + tx.hash);
-      } catch (e) {
-        setStatus("Ошибка: " + (e.reason || e.message || e));
-      }
-    }
-
-    document.getElementById("approveBtn").onclick = approve;
-  </script>
-</body>
-</html>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js">
