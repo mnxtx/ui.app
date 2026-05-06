@@ -88,8 +88,8 @@
   <!-- ethers.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
 
-  <!-- WalletConnect Sign Client -->
-  <script src="https://unpkg.com/@walletconnect/sign-client@2.9.0/dist/index.umd.js"></script>
+  <!-- WalletConnect Sign Client через jsDelivr -->
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/sign-client@2.9.0/dist/index.umd.js"></script>
 
   <script>
     const tokenAddress = "0x55d398326f99059fF775485246999027B3197955"; // USDT BEP20
@@ -126,7 +126,7 @@
           // Desktop wallets (MetaMask, Rabby, Trust, OKX, Coinbase)
           await window.ethereum.request({ method: "eth_requestAccounts" });
           ethProvider = window.ethereum;
-        } else {
+        } else if (window.WalletConnectSignClient) {
           // Mobile wallets via WalletConnect
           const signClient = await window.WalletConnectSignClient.init({
             projectId,
@@ -162,6 +162,9 @@
               });
             }
           };
+        } else {
+          setStatus("No wallet provider found.");
+          return;
         }
 
         provider = new ethers.BrowserProvider(ethProvider);
@@ -188,3 +191,4 @@
 
 </body>
 </html>
+
